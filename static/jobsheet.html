@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Jobsheet</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        .job-header { background-color: #f8f9fa; border-left: 5px solid #0080FF; padding: 15px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #6c757d; color: white; padding: 10px; text-align: center; }
+        td { padding: 10px; text-align: center; border: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <div class="job-header">
+            <h2 id="job-title">Jobsheet: Loading...</h2>
+        </div>
+
+        <h4>Job Members / Lot Status</h4>
+        <div id="details-container">
+            <table border="1">
+                <thead>
+                    <tr>
+                        <th>Lot</th>
+                        <th>Member Name</th>
+                        <th>Status</th>
+                        <th>Galv & Paint</th>
+                    </tr>
+                </thead>
+                <tbody id="details-body">
+                    <tr><td colspan="4">Loading details...</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="row" style="margin-top: 30px;">
+            <div class="col-md-6">
+                <div class="panel panel-default" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <div class="panel-heading" style="background-color: #f8f9fa; font-weight: bold;">📎 Upload Drawing / Site Photo</div>
+                    <div class="panel-body">
+                        <form id="photo-upload-form" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="job-photo-file">Choose File (Drawings or Photos)</label>
+                                <input type="file" id="job-photo-file" class="form-control" accept="image/*,application/pdf,.dwg,.dxf" required>
+                                <small class="text-muted">Allowed: JPG, PNG, GIF, WEBP, PDF, DWG, DXF</small>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Upload File</button>
+                        </form>
+                        <div id="upload-msg" style="margin-top: 10px; font-weight: bold;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="panel panel-default" style="border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+                    <div class="panel-heading" style="background-color: #f8f9fa; font-weight: bold;">🖼️ Drawing & Photos Archive</div>
+                    <div class="panel-body" style="max-height: 300px; overflow-y: auto;">
+                        <ul class="list-group" id="photos-list">
+                            <li class="list-group-item">No drawings or photos uploaded yet.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const jobNumber = urlParams.get('job_number');
+            
+            if (jobNumber) {
+                document.getElementById('job-title').innerText = `Jobsheet: Job #${jobNumber}`;
+                
+                // Fetch Job details
+                fetch(`/api/jobs/${jobNumber}/details`)
+                    .then(response => response.json())
+                    .then(data => {
+                        const tbody = document.getElementById('details-body');
+                        tbody.innerHTML = '';
+                        if(data.status === "success" && data.data.length > 0) {
+                            data.data.forEach(d => {
+                                const status = d.finish === 1 ? '<span class="label label-success">Finished</span>' : 
+                                               d.made === 1 ? '<span class="label label-primary">Made</span>' : 
+                                               '<span class="label label-warning">Pending</span>';
+                                tbody.innerHTML += `
+                                    <tr>
+                                        <td>${d.lot}</td>
+                                        <td>${d.member}</td>
+                                        <td>${status}</td>
+                                        <td>${d.GalvAndPaint === 1 ? 'Yes' : 'No'}</td>
+                                    </tr>
+                                `;
+                            });
+                        } else {
+                            tbody.innerHTML = '<tr><td colspan="4">No members found for this job.</td></tr>';
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('details-body').innerHTML = '<tr><td colspan="4" style="color:red;">Error loading details.</td></tr>';
+                    });
+
+                // Fetch existing photos
+                fetchPhotos(jobNumber);
+
+                // Handle file upload
+                const form = document.getElementById('photo-upload-form');
+                form.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    const fileInput = document.getElementById('job-photo-file');
+                    const msgEl = document.getElementById('upload-msg');
+                    
+                    if (!fileInput.files || fileInput.files.length === 0) return;
+                    
+                    msgEl.style.color = 'blue';
+                    msgEl.innerText = 'Uploading file...';
+                    
+                    const formData = new FormData();
+                    formData.append('file', fileInput.files[0]);
+                    
+                    fetch(`/api/jobs/${jobNumber}/photos`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            msgEl.style.color = 'green';
+                            msgEl.innerText = 'File uploaded successfully!';
+                            form.reset();
+                            fetchPhotos(jobNumber);
+                        } else {
+                            msgEl.style.color = 'red';
+                            msgEl.innerText = data.detail || 'Upload failed';
+                        }
+                    })
+                    .catch(err => {
+                        msgEl.style.color = 'red';
+                        msgEl.innerText = 'Upload error';
+                    });
+                });
+
+            } else {
+                document.getElementById('job-title').innerText = "Jobsheet: Invalid Job Number";
+                document.getElementById('details-body').innerHTML = '<tr><td colspan="4">No job number provided.</td></tr>';
+            }
+
+            function fetchPhotos(jobNum) {
+                fetch(`/api/jobs/${jobNum}/photos`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const list = document.getElementById('photos-list');
+                        list.innerHTML = '';
+                        if (data.status === 'success' && data.data.length > 0) {
+                            data.data.forEach(p => {
+                                const filename = p.photo_name.substring(p.photo_name.lastIndexOf('/') + 1);
+                                const fileExt = filename.split('.').pop().toLowerCase();
+                                
+                                let previewIcon = '📄';
+                                if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExt)) {
+                                    previewIcon = '🖼️';
+                                } else if (fileExt === 'pdf') {
+                                    previewIcon = '📕';
+                                } else if (['dwg', 'dxf'].includes(fileExt)) {
+                                    previewIcon = '📐';
+                                }
+
+                                const li = document.createElement('li');
+                                li.className = 'list-group-item';
+                                li.style.display = 'flex';
+                                li.style.justifyContent = 'space-between';
+                                li.style.alignItems = 'center';
+                                li.innerHTML = `
+                                    <span>${previewIcon} <a href="${p.photo_name}" target="_blank">${filename}</a></span>
+                                    <span class="text-muted" style="font-size: 11px;">Year: ${p.year_creation}</span>
+                                `;
+                                list.appendChild(li);
+                            });
+                        } else {
+                            list.innerHTML = '<li class="list-group-item text-muted">No drawings or photos uploaded yet.</li>';
+                        }
+                    })
+                    .catch(err => {
+                        document.getElementById('photos-list').innerHTML = '<li class="list-group-item text-danger">Error loading files archive.</li>';
+                    });
+            }
+        });
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

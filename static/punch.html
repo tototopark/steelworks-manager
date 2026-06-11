@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Punch Clock</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        .punch-clock-container {
+            border: 3px solid #0080FF;
+            border-radius: 15px;
+            padding: 40px;
+            margin-top: 30px;
+            background-color: #f9f9f9;
+        }
+        
+        .time-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        
+        .punch-btn {
+            font-size: 24px;
+            padding: 15px 40px;
+            border-radius: 50px;
+            font-weight: bold;
+            margin: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <div class="punch-clock-container">
+            <h2>Workshop Punch Clock</h2>
+            <div class="time-display" id="current-time">00:00:00</div>
+            
+            <div style="max-width: 300px; margin: 0 auto 20px;">
+                <label>Select Employee</label>
+                <select id="employee-select" class="form-control" style="font-size: 18px; height: 45px;">
+                    <option value="">-- Choose Name --</option>
+                    <!-- Options populated by JS -->
+                </select>
+            </div>
+
+            <button class="btn btn-success punch-btn" onclick="punchAction('in')">PUNCH IN</button>
+            <button class="btn btn-danger punch-btn" onclick="punchAction('out')">PUNCH OUT</button>
+            <br>
+            <span class="dev-hint" style="display:none; color:#888; font-size:12px; margin-top:5px;">[DB: tb_punchsheet | Code: core/api_router.py]</span>
+            
+            <div id="punch-message" style="margin-top: 20px; font-size: 18px; font-weight: bold;"></div>
+            <p style="margin-top: 20px; color: #777;">Note: Backend API for Punch records is under construction.</p>
+        </div>
+    </div>
+
+    <script>
+        // Clock functionality
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toLocaleTimeString('en-NZ', { hour12: false });
+        }, 1000);
+
+        // Fetch employees to populate dropdown
+        document.addEventListener("DOMContentLoaded", function() {
+            fetch('/api/employees')
+                .then(response => response.json())
+                .then(data => {
+                    if(data.status === "success") {
+                        const select = document.getElementById('employee-select');
+                        data.data.forEach(emp => {
+                            const opt = document.createElement('option');
+                            opt.value = emp.id;
+                            opt.innerText = `${emp.firstname} ${emp.surname}`;
+                            select.appendChild(opt);
+                        });
+                    }
+                })
+                .catch(err => console.error("Could not load employees for punch clock"));
+
+            // Check if dev features are enabled
+            fetch('/api/config/dev_features')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.dev_hints) {
+                        document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                    }
+                });
+        });
+
+        // Call the punch API
+        function punchAction(type) {
+            const select = document.getElementById('employee-select');
+            const empName = select.options[select.selectedIndex].text;
+            const empId = select.value;
+            
+            if(!empId) {
+                alert("Please select an employee first!");
+                return;
+            }
+            
+            fetch('/api/punch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ employee_id: parseInt(empId), action: type })
+            })
+            .then(res => res.json())
+            .then(data => {
+                const msgBox = document.getElementById('punch-message');
+                if(data.status === "success") {
+                    msgBox.style.color = type === 'in' ? 'green' : 'red';
+                    msgBox.innerText = `Successfully punched ${type.toUpperCase()} for ${empName} at ${new Date().toLocaleTimeString('en-NZ', { hour12: false })}`;
+                } else {
+                    msgBox.style.color = 'red';
+                    msgBox.innerText = 'Error: ' + data.detail;
+                }
+            })
+            .catch(err => {
+                const msgBox = document.getElementById('punch-message');
+                msgBox.style.color = 'red';
+                msgBox.innerText = 'Failed to communicate with server.';
+            });
+        }
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

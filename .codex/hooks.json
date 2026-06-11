@@ -1,0 +1,7 @@
+{
+  "preEdit": "review before edit",
+  "postEdit": "record changes",
+  "stop": "stop work",
+  "edit": "apply edit"
+}
+

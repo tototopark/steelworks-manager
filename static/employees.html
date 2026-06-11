@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Employees</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <!-- Access Level Guide Modal -->
+    <div class="modal fade" id="accessLevelGuideModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Access Level Guide</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-bordered">
+                        <thead><tr><th>Level</th><th>Roles</th></tr></thead>
+                        <tbody>
+                            <tr><td><strong>10+</strong></td><td>Admin / GM</td></tr>
+                            <tr><td><strong>6</strong></td><td>PM / BM / QA Manager</td></tr>
+                            <tr><td><strong>5</strong></td><td>Accounts</td></tr>
+                            <tr><td><strong>4</strong></td><td>QS</td></tr>
+                            <tr><td><strong>8</strong></td><td>Transport</td></tr>
+                            <tr><td><strong>9</strong></td><td>Beam Line</td></tr>
+                            <tr><td><strong>1, 2, 3, 12</strong></td><td>Workshop / Site / F/W / Rigger / TA / Test</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #28a745; color: white; padding: 10px; text-align: center; }
+        td { padding: 10px; text-align: center; border: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .action-btn { padding: 5px 10px; margin: 2px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <div class="row" style="margin-bottom: 15px;">
+            <div class="col-md-8">
+                <h2>Employee Directory</h2>
+            </div>
+            <div class="col-md-6">
+                <button class="btn btn-success" data-toggle="modal" data-target="#addEmployeeModal" onclick="window.location.href='/admin.html'">
+                    <i class="fa fa-plus"></i> Add Employee
+                </button>
+                <button class="btn btn-info" data-toggle="modal" data-target="#accessLevelGuideModal" style="margin-left:10px;">
+                    <i class="fa fa-info-circle"></i> Access Level Guide
+                </button>
+            </div>
+            <div class="col-md-6 text-right">
+                <label style="margin-right:10px; font-weight:bold;">Status Filter:</label>
+                <select id="emp-status-filter" class="form-control" style="display:inline-block; width:auto;" onchange="fetchEmployees()">
+                    <option value="active" selected>Active Employees</option>
+                    <option value="retired">Retired Employees</option>
+                </select>
+            </div>
+        </div>
+
+        <table class="table table-bordered table-striped" id="employees-table">
+            <thead>
+                <tr>
+                    <th style="width:60px;">Photo</th>
+                    <th onclick="sortTable('employees-table', 1)" style="cursor:pointer;">ID</th>
+                    <th onclick="sortTable('employees-table', 2)" style="cursor:pointer;">Login</th>
+                    <th onclick="sortTable('employees-table', 3)" style="cursor:pointer;">Name</th>
+                    <th onclick="sortTable('employees-table', 4)" style="cursor:pointer;">Role</th>
+                    <th onclick="sortTable('employees-table', 5)" style="cursor:pointer;">Access Level</th>
+                    <th onclick="sortTable('employees-table', 6)" style="cursor:pointer;">Bay / Shop</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="employees-body">
+                <tr><td colspan="8">Loading employees...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Edit Employee Modal -->
+    <div class="modal fade" id="editEmployeeModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Edit Employee</h4>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="edit-id">
+            <div class="row">
+                <div class="col-md-4 text-center" style="padding-bottom:10px;">
+                    <img id="edit-avatar-preview" src="/uploads/avatars/default.png" onerror="this.src='/gallery/EditUser-ts6485799235.png'" style="width:90px; height:90px; object-fit:cover; border-radius:50%; border:3px solid #5cb85c;" alt="Avatar">
+                    <br>
+                    <label class="btn btn-xs btn-default" style="margin-top:8px;" for="edit-avatar-file">Change Photo</label>
+                    <input type="file" id="edit-avatar-file" style="display:none;" accept="image/jpeg,image/png,image/gif,image/webp" onchange="previewEditAvatar(this)">
+                    <div id="edit-avatar-msg" style="font-size:11px; color:green;"></div>
+                </div>
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" id="edit-firstname" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>Surname</label>
+                        <input type="text" id="edit-surname" class="form-control">
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <input type="text" id="edit-role" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Access Level (Right Level)</label>
+                <input type="number" id="edit-right-level" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Bay</label>
+                <input type="number" id="edit-bay" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Shop Label</label>
+                <input type="text" id="edit-shop-label" class="form-control">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="saveEmployeeEdit()">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        function sortTable(tableId, n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById(tableId);
+            switching = true;
+            dir = "asc"; 
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    var cmpX = x.innerText.toLowerCase();
+                    var cmpY = y.innerText.toLowerCase();
+                    if (!isNaN(cmpX) && !isNaN(cmpY)) {
+                        cmpX = parseFloat(cmpX);
+                        cmpY = parseFloat(cmpY);
+                    }
+                    if (dir == "asc") {
+                        if (cmpX > cmpY) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (cmpX < cmpY) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchEmployees();
+        });
+
+        function fetchEmployees() {
+            const status = document.getElementById('emp-status-filter').value;
+            fetch(`/api/employees?status=${status}`)
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('employees-body');
+                    tbody.innerHTML = '';
+                    
+                    if(data.status === "success" && data.data.length > 0) {
+                        data.data.forEach(emp => {
+                            const isRetired = (status === 'retired');
+                            const actionBtns = isRetired ? 
+                                `<span class="text-muted">Retired</span>` :
+                                `<button class="btn btn-warning btn-sm" onclick='openEditModal(${JSON.stringify(emp).replace(/'/g, "&apos;")})'> Edit</button>
+                                <button class="btn btn-info btn-sm" onclick="resetPassword(${emp.id}, '${emp.firstname} ${emp.surname}')"> Reset PWD</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteEmployee(${emp.id}, '${emp.firstname} ${emp.surname}')"> Delete</button>`;
+
+                            // Avatar
+                            let avatarSrc = '/gallery/EditUser-ts6485799235.png';
+                            if (emp.avatar) {
+                                if (emp.avatar.startsWith('/')) {
+                                    avatarSrc = emp.avatar;
+                                } else {
+                                    avatarSrc = '/uploads/avatars/' + emp.avatar;
+                                }
+                            }
+
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td style="text-align:center;">
+                                    <img src="${avatarSrc}" onerror="this.src='/gallery/EditUser-ts6485799235.png'" 
+                                         style="width:44px; height:44px; border-radius:50%; object-fit:cover; border:2px solid #5cb85c;" alt="">
+                                </td>
+                                <td>${emp.id}</td>
+                                <td>${emp.login}</td>
+                                <td><b>${emp.firstname} ${emp.surname}</b></td>
+                                <td>${emp.role || ''}</td>
+                                <td>${emp.right_level}</td>
+                                <td>${emp.shop_label || ''} (Bay ${emp.bay || ''})</td>
+                                <td>${actionBtns}</td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="8">No employees found in this category.</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching employees:', error);
+                    document.getElementById('employees-body').innerHTML = '<tr><td colspan="8" style="color:red;">Error loading employees.</td></tr>';
+                });
+        }
+
+        function openEditModal(emp) {
+            document.getElementById('edit-id').value = emp.id;
+            document.getElementById('edit-firstname').value = emp.firstname;
+            document.getElementById('edit-surname').value = emp.surname;
+            document.getElementById('edit-role').value = emp.role || '';
+            document.getElementById('edit-right-level').value = emp.right_level || 1;
+            document.getElementById('edit-bay').value = emp.bay || '';
+            document.getElementById('edit-shop-label').value = emp.shop_label || '';
+            // Load avatar
+            let avatarSrc = '/gallery/EditUser-ts6485799235.png';
+            if (emp.avatar) {
+                if (emp.avatar.startsWith('/')) {
+                    avatarSrc = emp.avatar;
+                } else {
+                    avatarSrc = '/uploads/avatars/' + emp.avatar;
+                }
+            }
+            document.getElementById('edit-avatar-preview').src = avatarSrc;
+            document.getElementById('edit-avatar-msg').innerText = '';
+            $('#editEmployeeModal').modal('show');
+        }
+
+        function saveEmployeeEdit() {
+            const id = document.getElementById('edit-id').value;
+            const payload = {
+                firstname: document.getElementById('edit-firstname').value,
+                surname: document.getElementById('edit-surname').value,
+                role: document.getElementById('edit-role').value,
+                right_level: parseInt(document.getElementById('edit-right-level').value) || 1,
+                bay: parseInt(document.getElementById('edit-bay').value) || null,
+                shop_label: document.getElementById('edit-shop-label').value
+            };
+
+            fetch(`/api/employees/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    alert('Employee updated successfully!');
+                    $('#editEmployeeModal').modal('hide');
+                    fetchEmployees();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error updating employee');
+            });
+        }
+
+        function deleteEmployee(id, name) {
+            if(!confirm(`Are you sure you want to deactivate employee: ${name}?`)) return;
+            fetch(`/api/employees/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    alert('Employee deactivated successfully!');
+                    fetchEmployees();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error deleting employee');
+            });
+        }
+
+        async function resetPassword(id, name) {
+            if(!confirm(`Are you sure you want to generate a new random password for ${name}?`)) return;
+
+            try {
+                const response = await fetch(`/api/employees/${id}/random-password`, { method: 'POST' });
+                const result = await response.json();
+                if(response.ok && result.status === 'success') {
+                    alert(`[SUCCESS] New password for ${name} is: ${result.new_password}\n\nPlease copy this password and securely transmit it to the employee.`);
+                } else {
+                    alert('Error: ' + (result.detail || result.message));
+                }
+            } catch (err) {
+                alert('Network error while resetting password.');
+            }
+        }
+        function previewEditAvatar(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('edit-avatar-preview').src = e.target.result;
+                };
+                reader.readAsDataURL(input.files[0]);
+                uploadEditAvatar();
+            }
+        }
+
+        async function uploadEditAvatar() {
+            const empId = document.getElementById('edit-id').value;
+            const fileInput = document.getElementById('edit-avatar-file');
+            const msgEl = document.getElementById('edit-avatar-msg');
+            if (!fileInput.files || fileInput.files.length === 0) return;
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            try {
+                const res = await fetch(`/api/employees/${empId}/avatar`, { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.status === 'success') {
+                    msgEl.style.color = 'green';
+                    msgEl.innerText = 'Photo saved!';
+                    // Update preview with cache-buster
+                    document.getElementById('edit-avatar-preview').src = data.avatar_url + '?t=' + Date.now();
+                } else {
+                    msgEl.style.color = 'red';
+                    msgEl.innerText = data.detail || 'Upload failed';
+                }
+            } catch(err) {
+                msgEl.style.color = 'red';
+                msgEl.innerText = 'Upload error';
+            }
+        }
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

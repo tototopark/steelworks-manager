@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - New Job</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        .form-group { margin-bottom: 15px; }
+        label { font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <h2>Create New Job</h2>
+        <form id="new-job-form">
+            <div class="form-group">
+                <label>Job Number (e.g., 9992)</label>
+                <input type="number" id="job_number" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" id="company_name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Site Address</label>
+                <input type="text" id="site_address" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Supervisor Name</label>
+                <input type="text" id="supervisor_name" class="form-control">
+            </div>
+            
+            <div class="form-group" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ccc;">
+                <h4>Bulk Ingest Members (Excel Data)</h4>
+                <p style="color: #666;">Copy rows directly from Excel and paste here. Expected format: <code>Page [Tab] Lot [Tab] Member</code></p>
+                <textarea id="raw_excel_data" class="form-control" rows="10" placeholder="Example:&#10;1   1   B1&#10;1   1   task_paint&#10;2   3   C4"></textarea>
+            </div>
+            
+            <button type="submit" class="btn btn-success btn-lg">Create Job & Ingest Data</button>
+            <span class="dev-hint" style="display:none; color:#888; font-size:12px; margin-left:10px;">[DB: tb_jobs, tb_jobs_details | Code: skills/010_job_pipeline.py]</span>
+            <button type="button" id="btn-autofill" class="btn btn-warning btn-lg" style="display:none; margin-left:10px;">🪄 Auto Fill (Test)</button>
+            <a href="/jobs.html" class="btn btn-default btn-lg" style="margin-left:10px;">Cancel</a>
+        </form>
+
+        <div id="result-message" style="margin-top: 20px; font-weight: bold;"></div>
+    </div>
+
+    <script>
+        document.getElementById('new-job-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const payload = {
+                job_number: parseInt(document.getElementById('job_number').value),
+                company_name: document.getElementById('company_name').value,
+                site_address: document.getElementById('site_address').value,
+                supervisor_name: document.getElementById('supervisor_name').value,
+                raw_excel_data: document.getElementById('raw_excel_data').value
+            };
+
+            const endpoint = payload.raw_excel_data.trim() !== '' ? '/api/jobs/ingest' : '/api/jobs';
+
+            fetch(endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.json();
+                } else {
+                    return response.json().then(err => { throw err; });
+                }
+            })
+            .then(data => {
+                document.getElementById('result-message').style.color = 'green';
+                document.getElementById('result-message').innerText = data.message || 'Job created successfully! Redirecting...';
+                setTimeout(() => {
+                    window.location.href = '/jobs.html';
+                }, 2000);
+            })
+            .catch(error => {
+                document.getElementById('result-message').style.color = 'red';
+                document.getElementById('result-message').innerText = 'Error: ' + (error.detail || error.message || 'Failed to create job.');
+            });
+        });
+
+        // Check if dev features are enabled
+        fetch('/api/config/dev_features')
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    if (data.auto_fill) {
+                        const btn = document.getElementById('btn-autofill');
+                        btn.style.display = 'inline-block';
+                        btn.addEventListener('click', function() {
+                            const randomJobNum = 10000 + Math.floor(Math.random() * 9000);
+                            document.getElementById('job_number').value = randomJobNum;
+                            document.getElementById('company_name').value = "AutoCorp (Test " + randomJobNum + ")";
+                            document.getElementById('site_address').value = "77 Automation Way, FakeCity";
+                            document.getElementById('supervisor_name').value = "Bot Worker";
+                            
+                            // Generate 50 random member lines
+                            let bulkData = "";
+                            for (let lot = 1; lot <= 5; lot++) {
+                                for (let m = 1; m <= 10; m++) {
+                                    if (m === 1) {
+                                        bulkData += `1\t${lot}\ttask_setup\n`;
+                                    }
+                                    bulkData += `1\t${lot}\tB${lot}0${m}\n`;
+                                }
+                            }
+                            document.getElementById('raw_excel_data').value = bulkData;
+                        });
+                    }
+                    
+                    if (data.dev_hints) {
+                        document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                    }
+                }
+            });
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Admin Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>mermaid.initialize({startOnLoad:true});</script>
+
+    <style>
+        body { padding-top: 20px; background-color: #f4f7f6; }
+        .admin-section { background: white; border: 1px solid #ddd; border-radius: 5px; padding: 20px; margin-bottom: 20px; box-shadow: 2px 2px 5px rgba(0,0,0,0.05); }
+        .admin-section h4 { color: #d35400; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; }
+        .danger-zone { border: 2px dashed #e74c3c; background: #fadbd8; }
+        .danger-zone h4 { color: #c0392b; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <h2>System Administration</h2>
+        <p class="text-muted">Manage system data, users, and perform maintenance tasks.</p>
+
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-md-6">
+                
+                <!-- Add Employee Section -->
+                <div class="admin-section">
+                    <h4 style="display:inline-block;">Register New Employee</h4>
+                    <button type="button" class="btn btn-xs btn-info pull-right auto-fill-btn" style="display:none; margin-top:5px;" onclick="autoFillEmployee()">Auto Fill</button>
+                    <form id="employee-form">
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label>First Name</label>
+                                <input type="text" id="emp_first" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Surname</label>
+                                <input type="text" id="emp_last" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label>Login ID</label>
+                                <input type="text" id="emp_login" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Password</label>
+                                <input type="text" id="emp_pass" class="form-control" value="12345678" disabled>
+                                <small class="text-muted">Auto-generated default</small>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label>Role</label>
+                                <select id="emp_role" class="form-control">
+                                    <option value="Welder">Welder</option>
+                                    <option value="Fabricator">Fabricator</option>
+                                    <option value="Supervisor">Supervisor</option>
+                                    <option value="Admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label>Access Level</label>
+                                <input type="number" id="emp_level" class="form-control" value="1">
+                                <small class="text-muted" style="display:block; margin-top:5px; line-height:1.2;">
+                                    <b>1:</b> Standard (Punch Clock)<br>
+                                    <b>5:</b> Supervisor (QA Dashboard)<br>
+                                    <b>10:</b> Admin (Full Access)
+                                </small>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-6">
+                                <label>Profile Photo (Optional)</label>
+                                <input type="file" id="emp_avatar" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp">
+                                <small class="text-muted">JPG, PNG, GIF or WEBP (max 5MB)</small>
+                            </div>
+                            <div class="col-md-6" style="padding-top:25px;">
+                                <img id="emp_avatar_preview" src="" style="width:80px; height:80px; object-fit:cover; border-radius:50%; border:2px solid #ccc; display:none;" alt="Preview">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Create Employee</button>
+                        <span class="dev-hint" style="display:none; color:#888; font-size:12px; margin-left:10px;">[DB: tb_login | Code: core/api_router.py]</span>
+                    </form>
+                    <div id="emp-msg" style="margin-top:10px; font-weight:bold;"></div>
+                </div>
+
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-md-6">
+                
+                <!-- Server Health / Smoke Check -->
+                <div class="admin-section">
+                    <h4 style="display:inline-block;">Server Health & Smoke Check</h4>
+                    <button class="btn btn-xs btn-primary pull-right" onclick="fetchHealth()">Refresh</button>
+                    <table class="table table-bordered table-condensed" style="margin-top:10px; background:white;">
+                        <tbody id="health-body">
+                            <tr><td>Loading health check...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+
+                <!-- Factory Reset / Data Cleaner -->
+                <div class="admin-section" style="border-left: 5px solid #d9534f; background: #fdf5f5;">
+                    <h4 style="color:#d9534f;">Factory Reset / Data Cleaner</h4>
+                    <p style="font-size:13px; color:#555;">Warning: This will permanently delete all operational data (Jobs, WIP, Punch, QA, Tasks) except Admin users and system configs.</p>
+                    <button class="btn btn-danger btn-block" onclick="$('#resetModal').modal('show')">🚨 Wipe All Operational Data</button>
+                </div>
+
+                <!-- Assign Task Section -->
+                <div class="admin-section">
+                    <h4 style="display:inline-block;">Assign Whiteboard Task</h4>
+                    <button type="button" class="btn btn-xs btn-info pull-right auto-fill-btn" style="display:none; margin-top:5px;" onclick="autoFillTask()">⚡ Auto Fill</button>
+                    <form id="task-form">
+                        <div class="form-group">
+                            <label>Select Employee</label>
+                            <select id="task_emp" class="form-control" required>
+                                <option value="">Loading...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Site / Job Name</label>
+                            <input type="text" id="task_site" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Task Description</label>
+                            <input type="text" id="task_desc" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-warning">Assign Task</button>
+                        <span class="dev-hint" style="display:none; color:#888; font-size:12px; margin-left:10px;">[DB: tb_tasks, tb_tasks_... | Code: core/api_router.py]</span>
+                    </form>
+                    <div id="task-msg" style="margin-top:10px; font-weight:bold;"></div>
+                </div>
+
+                <!-- Danger Zone Section -->
+                <div class="admin-section danger-zone">
+                    <h4>Database Management (Danger Zone)</h4>
+                    <p>These actions affect the entire database. Use with caution during testing. 
+                       <span class="dev-hint" style="display:none; color:#888; font-size:12px;">[Code: skills/200_admin_pipeline.py]</span>
+                    </p>
+                    
+                    <button class="btn btn-danger" style="margin-bottom: 10px;" onclick="resetDB()">
+                        <i class="fa fa-warning"></i> Reset Database (Wipe All Data)
+                    </button>
+                    <br>
+                    <button class="btn btn-success" style="margin-bottom: 10px;" onclick="seedDB()">
+                        <i class="fa fa-database"></i> Seed Mock Data (Jobs, Users, Punches)
+                    </button>
+                    <br>
+                    <button class="btn btn-danger" style="margin-bottom: 10px;" onclick="migrateLegacyDB()">
+                        <i class="fa fa-rocket"></i> Migrate Legacy DB
+                    </button>
+                    <br>
+                    <button class="btn btn-warning" style="margin-bottom: 10px;" onclick="resetAllPasswords()">
+                        <i class="fa fa-key"></i> Reset All Passwords to 12345678
+                    </button>
+                    <br>
+                    <button class="btn btn-primary" style="margin-bottom: 10px;" onclick="runIntegrityCheck(false)">
+                        🛡️ Run DB Integrity Check
+                    </button>
+                    <br>
+                    <a href="/api/export/punch" class="btn btn-info" target="_blank">
+                        <i class="fa fa-download"></i> Export Punch Data (CSV)
+                    </a>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- Database Inspector -->
+        <div class="row">
+            <div class="col-md-12">
+                <div class="admin-section">
+                    <h4>Database Inspector</h4>
+                    
+                    <ul class="nav nav-tabs" style="margin-bottom: 15px;">
+                        <li class="active"><a data-toggle="tab" href="#data-explorer">Data Explorer</a></li>
+                        <li><a data-toggle="tab" href="#erd-viewer">ERD Viewer</a></li>
+                    </ul>
+
+                    <div class="tab-content">
+                        <!-- Data Explorer Tab -->
+                        <div id="data-explorer" class="tab-pane fade in active">
+                            <div class="form-inline" style="margin-bottom: 15px;">
+                                <label>Row Count: </label>
+                                <input type="number" id="inspect_limit" class="form-control" value="10" style="width: 80px; margin-right: 15px;">
+                                <label>Sort Order: </label>
+                                <label class="radio-inline"><input type="radio" name="inspect_sort" value="desc" checked> Latest First (DESC)</label>
+                                <label class="radio-inline"><input type="radio" name="inspect_sort" value="asc"> Oldest First (ASC)</label>
+                                <button type="button" class="btn btn-primary" style="margin-left: 20px;" onclick="loadInspector()">Reload Inspector</button>
+                            </div>
+                            <div id="inspector-grids-container">
+                                <!-- Tables will be dynamically rendered here -->
+                            </div>
+                        </div>
+                        
+                        <!-- ERD Viewer Tab -->
+                        <div id="erd-viewer" class="tab-pane fade">
+                            <div style="background: #fff; padding: 20px; border: 1px solid #ddd; overflow-x: auto;">
+                                <h5>Core Business ERD</h5>
+                                <div class="mermaid">
+erDiagram
+    tb-login ||--o{ tb-punchsheet : "Records punch"
+    tb-login ||--o{ tb-tasks : "Assigned"
+    tb-login ||--o{ tb-leaves : "Takes leaves"
+    
+    tb-jobs ||--o{ tb-jobs-details : "Contains details"
+    tb-jobs ||--o{ tb-tasks : "Has tasks"
+    tb-jobs ||--o{ tb-wip : "Tracks WIP"
+    tb-jobs ||--o{ tb-photos : "Job photos"
+    tb-jobs ||--o{ tb-production-plan : "Schedules"
+    tb-jobs ||--o{ tb-jobs-dates : "Timeline dates"
+    tb-jobs ||--o{ tb-jobs-date-install : "Install dates"
+    
+    tb-tasks ||--o{ tb-tasks-employees-affectation : "Has affectations"
+    tb-login ||--o{ tb-tasks-employees-affectation : "Assigned via"
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Integrity Check Modal -->
+    <div id="integrityModal" class="modal fade" role="dialog">
+      <div class="modal-dialog">
+        <!-- Modal content-->
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h4 class="modal-title">Database Integrity Report</h4>
+          </div>
+          <div class="modal-body" id="integrityModalBody">
+            <p>Loading...</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-danger" id="btnRepair" style="display:none;" onclick="runIntegrityCheck(true)">🛠️ Auto Repair</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Factory Reset Modal -->
+    <div id="resetModal" class="modal fade" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content" style="border: 2px solid #d9534f;">
+          <div class="modal-header" style="background-color: #d9534f; color: white;">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h4 class="modal-title">⚠️ DANGER: Factory Reset</h4>
+          </div>
+          <div class="modal-body">
+            <p>You are about to permanently delete all operational data. This action <b>CANNOT BE UNDONE</b>.</p>
+            <p>Please type <strong>I AM SURE</strong> below to confirm.</p>
+            <input type="text" id="reset_confirm_text" class="form-control" placeholder="Type here..." onkeyup="checkResetConfirm()">
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-danger" id="btnConfirmReset" disabled onclick="executeFactoryReset()">Delete All Data</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        // Auth Check
+        document.addEventListener("DOMContentLoaded", function() {
+            const rightLevel = localStorage.getItem('right_level');
+            if (rightLevel === null || parseInt(rightLevel) < 10) {
+                alert("Only Admins (Level 10+) can access this page.");
+                window.location.href = "/";
+                return;
+            }
+            
+            fetchConfig();
+            fetchTables();
+            fetchHealth();
+        });
+
+        function logout() {
+            localStorage.removeItem('admin_token');
+            localStorage.removeItem('right_level');
+            window.location.href = '/';
+        }
+
+        // Fetch Tables
+        function fetchTables() {
+            fetch('/api/admin/db_inspect/tables')
+                .then(r => r.json())
+                .then(data => {
+                    const tbody = document.getElementById('tables-body');
+                    tbody.innerHTML = '';
+                    if (data.status === 'success') {
+                        data.data.forEach(info => {
+                            tbody.innerHTML += `<tr>
+                                <td>${info.table_name}</td>
+                                <td>${info.row_count}</td>
+                                <td>${info.desc}</td>
+                            </tr>`;
+                        });
+                    }
+                });
+        }
+
+        // Fetch Server Health
+        function fetchHealth() {
+            const tbody = document.getElementById('health-body');
+            tbody.innerHTML = '<tr><td colspan="2">Running smoke check...</td></tr>';
+            
+            fetch('/api/admin/health')
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        tbody.innerHTML = `
+                            <tr><th style="width:40%;">Server Time</th><td>${data.server_time}</td></tr>
+                            <tr><th>DB Status</th><td style="color:green; font-weight:bold;">${data.db_status}</td></tr>
+                            <tr><th>DB Type / Size</th><td>${data.db_type.toUpperCase()} / ${data.db_size_mb} MB</td></tr>
+                            <tr><th>Schema</th><td>${data.schema_integrity}</td></tr>
+                            <tr><th>Python Engine</th><td>v${data.python_version}</td></tr>
+                        `;
+                    } else {
+                        tbody.innerHTML = `<tr><td colspan="2" style="color:red;">Error: ${data.db_status || 'Connection failed'}</td></tr>`;
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = `<tr><td colspan="2" style="color:red;">Network Error</td></tr>`;
+                });
+        }
+
+        function fetchConfig() {
+            fetch('/api/config/dev_features')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        if (data.auto_fill) {
+                            const btns = document.querySelectorAll('.auto-fill-btn');
+                            btns.forEach(b => b.style.display = 'inline-block');
+                        }
+                        if (data.dev_hints) {
+                            document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                        }
+                    }
+                });
+
+            // Load employees for task dropdown
+            fetch('/api/employees')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        const select = document.getElementById('task_emp');
+                        select.innerHTML = '<option value="">-- Choose Employee --</option>';
+                        data.data.forEach(emp => {
+                            select.innerHTML += `<option value="${emp.id}">${emp.firstname} ${emp.surname}</option>`;
+                        });
+                    }
+                });
+                
+            // Load DB Inspector initially
+            loadInspector();
+        }
+
+        function autoFillEmployee() {
+            const random = Math.floor(Math.random() * 1000);
+            document.getElementById('emp_first').value = 'Test';
+            document.getElementById('emp_last').value = 'User' + random;
+            document.getElementById('emp_login').value = 'test_usr' + random;
+            document.getElementById('emp_role').value = 'Welder';
+            document.getElementById('emp_level').value = '1';
+        }
+
+        function autoFillTask() {
+            const empSelect = document.getElementById('task_emp');
+            if (empSelect.options.length > 1) {
+                empSelect.selectedIndex = 1; // pick first available
+            }
+            document.getElementById('task_site').value = 'Auto Site A';
+            document.getElementById('task_desc').value = 'Auto generated test task description.';
+        }
+
+        document.getElementById('employee-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const msgEl = document.getElementById('emp-msg');
+            msgEl.style.color = 'blue';
+            msgEl.innerText = 'Creating employee...';
+
+            const payload = {
+                login: document.getElementById('emp_login').value,
+                password: '12345678',
+                firstname: document.getElementById('emp_first').value,
+                surname: document.getElementById('emp_last').value,
+                role: document.getElementById('emp_role').value,
+                right_level: parseInt(document.getElementById('emp_level').value)
+            };
+
+            try {
+                // Step 1: Create employee account
+                const res = await fetch('/api/employees', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                if (data.status !== 'success') {
+                    msgEl.style.color = 'red';
+                    msgEl.innerText = 'Error: ' + (data.detail || data.message || 'Failed to create employee');
+                    return;
+                }
+
+                // Step 2: Upload avatar if file selected
+                const avatarFile = document.getElementById('emp_avatar');
+                if (avatarFile && avatarFile.files.length > 0) {
+                    msgEl.style.color = 'blue';
+                    msgEl.innerText = 'Uploading photo...';
+
+                    // Get newly created employee id
+                    const empRes = await fetch('/api/employees');
+                    const empData = await empRes.json();
+                    const newEmp = empData.data.find(e => e.login === payload.login);
+
+                    if (newEmp) {
+                        const formData = new FormData();
+                        formData.append('file', avatarFile.files[0]);
+                        await fetch(`/api/employees/${newEmp.id}/avatar`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                    }
+                }
+
+                msgEl.style.color = 'green';
+                msgEl.innerText = 'Employee Created!';
+                setTimeout(() => location.reload(), 1500);
+            } catch(err) {
+                msgEl.style.color = 'red';
+                msgEl.innerText = 'Error creating employee.';
+            }
+        });
+
+        // Avatar preview on file select
+        document.addEventListener('DOMContentLoaded', function() {
+            const avatarInput = document.getElementById('emp_avatar');
+            if (avatarInput) {
+                avatarInput.addEventListener('change', function() {
+                    const preview = document.getElementById('emp_avatar_preview');
+                    if (this.files && this.files[0]) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            preview.src = e.target.result;
+                            preview.style.display = 'block';
+                        };
+                        reader.readAsDataURL(this.files[0]);
+                    }
+                });
+            }
+        });
+
+        document.getElementById('task-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                employee_id: parseInt(document.getElementById('task_emp').value),
+                site: document.getElementById('task_site').value,
+                task_instruction: document.getElementById('task_desc').value
+            };
+            fetch('/api/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(data => {
+                document.getElementById('task-msg').style.color = 'green';
+                document.getElementById('task-msg').innerText = 'Task Assigned!';
+                document.getElementById('task-form').reset();
+            }).catch(err => {
+                document.getElementById('task-msg').style.color = 'red';
+                document.getElementById('task-msg').innerText = 'Error assigning task.';
+            });
+        });
+
+        function resetDB() {
+            if (confirm("WARNING: This will drop and recreate all tables, wiping all data. Are you sure?")) {
+                fetch('/api/admin/db_reset', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => alert(data.message))
+                    .catch(err => alert("Failed to reset DB"));
+            }
+        }
+
+        function seedDB() {
+            if (confirm("This will inject mock data into the database. Proceed?")) {
+                fetch('/api/admin/db_seed', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => alert(data.message))
+                    .catch(err => alert("Failed to seed DB"));
+            }
+        }
+
+        function migrateLegacyDB() {
+            if (confirm("This will migrate data from the legacy SQL dump. It may take some time. Proceed?")) {
+                fetch('/api/admin/migrate_legacy', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => {
+                        alert(data.message);
+                        loadInspector();
+                    })
+                    .catch(err => alert("Migration failed."));
+            }
+        }
+
+        function resetAllPasswords() {
+            if (confirm("This will reset EVERY employee's password to '12345678'. Proceed?")) {
+                fetch('/api/admin/reset_passwords', { method: 'POST' })
+                    .then(res => res.json())
+                    .then(data => alert(data.message))
+                    .catch(err => alert("Failed to reset passwords."));
+            }
+        }
+
+        async function runIntegrityCheck(fix) {
+            $('#integrityModalBody').html('<p>Running check...</p>');
+            if (!fix) {
+                $('#btnRepair').hide();
+                $('#integrityModal').modal('show');
+            }
+            
+            try {
+                const res = await fetch('/api/admin/db_integrity', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ fix: fix })
+                });
+                const result = await res.json();
+                
+                if (result.status === "success") {
+                    let html = '<ul>';
+                    result.messages.forEach(m => html += `<li>${m}</li>`);
+                    html += '</ul>';
+                    
+                    if (result.total_violations > 0 && !fix) {
+                        html += '<h5>Details:</h5><ul>';
+                        for (const [k, v] of Object.entries(result.violations)) {
+                            if (v > 0) html += `<li>${k}: <span class="text-danger">${v} issues</span></li>`;
+                        }
+                        html += '</ul>';
+                        $('#btnRepair').show();
+                    } else if (fix) {
+                        $('#btnRepair').hide();
+                    }
+                    
+                    $('#integrityModalBody').html(html);
+                    
+                    if (fix) {
+                        loadInspector(); // Refresh grid after repair
+                    }
+                } else {
+                    $('#integrityModalBody').html(`<p class="text-danger">Error: ${result.message}</p>`);
+                }
+            } catch (e) {
+                $('#integrityModalBody').html('<p class="text-danger">Failed to run integrity check.</p>');
+            }
+        }
+
+        async function loadInspector() {
+            const container = document.getElementById('inspector-grids-container');
+            container.innerHTML = '<p>Loading tables...</p>';
+            
+            try {
+                const res = await fetch('/api/admin/db_inspect/tables');
+                const result = await res.json();
+                if (result.status === "success") {
+                    container.innerHTML = '';
+                    for (const table of result.data) {
+                        if (!table.error) {
+                            renderTableGrid(table, container);
+                        }
+                    }
+                }
+            } catch(e) {
+                container.innerHTML = '<p class="text-danger">Failed to load tables.</p>';
+            }
+        }
+
+        async function renderTableGrid(tableObj, container) {
+            const tableName = tableObj.table_name;
+            const desc = tableObj.desc;
+            const rel = tableObj.rel;
+            
+            const limit = document.getElementById('inspect_limit').value || 10;
+            const sortOrder = document.querySelector('input[name="inspect_sort"]:checked').value;
+            
+            const wrapperId = `grid-wrap-${tableName}`;
+            container.innerHTML += `
+                <div class="panel panel-default" id="${wrapperId}" style="margin-bottom: 15px;">
+                    <div class="panel-heading" style="font-weight:bold; background-color:#e2e2e2;">
+                        ${tableName} <span class="badge" id="badge-${tableName}">...</span>
+                        <div style="font-weight:normal; font-size:12px; margin-top:5px; color:#555;">
+                            <b>Purpose:</b> ${desc} | <b>Relation:</b> ${rel}
+                        </div>
+                    </div>
+                    <div class="panel-body" style="overflow-x:auto; max-height: 400px;">
+                        <table class="table table-bordered table-striped table-condensed" style="font-size:12px;">
+                            <thead id="thead-${tableName}"></thead>
+                            <tbody id="tbody-${tableName}"></tbody>
+                        </table>
+                        <div class="text-center">
+                            <button class="btn btn-sm btn-default" onclick="loadMoreData('${tableName}')" id="btn-more-${tableName}" data-offset="0">Load More</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            await fetchAndRenderData(tableName, limit, 0, sortOrder);
+        }
+
+        async function fetchAndRenderData(tableName, limit, offset, sortOrder) {
+            try {
+                const res = await fetch(`/api/admin/db_inspect/${tableName}?limit=${limit}&offset=${offset}&sort_order=${sortOrder}`);
+                const result = await res.json();
+                if (result.status === "success") {
+                    document.getElementById(`badge-${tableName}`).innerText = `Total Rows: ${result.total_rows}`;
+                    
+                    if (offset === 0) {
+                        const thead = document.getElementById(`thead-${tableName}`);
+                        let trHead = '<tr>';
+                        result.columns.forEach(c => trHead += `<th>${c.name} <br><small class="text-muted">${c.type}</small></th>`);
+                        trHead += '</tr>';
+                        thead.innerHTML = trHead;
+                        document.getElementById(`tbody-${tableName}`).innerHTML = '';
+                    }
+
+                    const tbody = document.getElementById(`tbody-${tableName}`);
+                    result.data.forEach(row => {
+                        let tr = '<tr>';
+                        result.columns.forEach(c => {
+                            let val = row[c.name];
+                            if (val === null) val = '<i>NULL</i>';
+                            else val = String(val).substring(0, 30);
+                            tr += `<td>${val}</td>`;
+                        });
+                        tr += '</tr>';
+                        tbody.innerHTML += tr;
+                    });
+                    
+                    const btn = document.getElementById(`btn-more-${tableName}`);
+                    const newOffset = offset + parseInt(limit);
+                    if (newOffset >= result.total_rows || result.data.length === 0) {
+                        btn.style.display = 'none';
+                    } else {
+                        btn.style.display = 'inline-block';
+                        btn.dataset.offset = newOffset;
+                    }
+                }
+            } catch(e) {
+                console.error(e);
+            }
+        }
+
+        function loadMoreData(tableName) {
+            const limit = document.getElementById('inspect_limit').value || 10;
+            const sortOrder = document.querySelector('input[name="inspect_sort"]:checked').value;
+            const btn = document.getElementById(`btn-more-${tableName}`);
+            const offset = parseInt(btn.dataset.offset);
+            fetchAndRenderData(tableName, limit, offset, sortOrder);
+        }
+
+        // Factory Reset
+        function checkResetConfirm() {
+            const val = document.getElementById('reset_confirm_text').value;
+            document.getElementById('btnConfirmReset').disabled = (val !== "I AM SURE");
+        }
+
+        function executeFactoryReset() {
+            document.getElementById('btnConfirmReset').innerText = "Deleting...";
+            document.getElementById('btnConfirmReset').disabled = true;
+            
+            fetch('/api/admin/clean-data', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert(data.message);
+                        window.location.reload();
+                    } else {
+                        alert("Error: " + data.message);
+                        $('#resetModal').modal('hide');
+                        document.getElementById('btnConfirmReset').innerText = "Delete All Data";
+                    }
+                })
+                .catch(err => {
+                    alert("Network error.");
+                    $('#resetModal').modal('hide');
+                    document.getElementById('btnConfirmReset').innerText = "Delete All Data";
+                });
+        }
+
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

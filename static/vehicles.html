@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Vehicles & Reminders</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #6f42c1; color: white; padding: 10px; text-align: center; }
+        td { padding: 10px; text-align: center; border: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .form-inline .form-control { width: 100%; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <h2>Company Vehicles & Reminders</h2>
+                <p>Track WOF, Rego, and Servicing schedules.</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <button class="btn btn-primary" style="margin-top:20px;" data-toggle="collapse" data-target="#new-vehicle-form">+ Add Vehicle</button>
+            </div>
+        </div>
+
+        <div id="new-vehicle-form" class="collapse" style="background:#f8f9fa; padding:15px; border:1px solid #ddd; border-radius:5px; margin-top:15px;">
+            <h4 style="display:inline-block;">Register New Vehicle</h4>
+            <button type="button" class="btn btn-xs btn-info pull-right auto-fill-btn" style="display:none; margin-top:5px;" onclick="autoFillVehicle()">⚡ Auto Fill</button>
+            <form id="vehicle-form">
+                <div class="row">
+                    <div class="col-md-4"><input type="text" id="v_name" class="form-control" placeholder="Vehicle Name" required></div>
+                    <div class="col-md-4"><input type="text" id="v_plate" class="form-control" placeholder="Plate Number" required></div>
+                    <div class="col-md-4"><input type="date" id="v_wof" class="form-control" title="WOF Expiry" required></div>
+                </div>
+                <div class="row" style="margin-top:10px;">
+                    <div class="col-md-4"><input type="date" id="v_rego" class="form-control" title="Rego Expiry" required></div>
+                    <div class="col-md-4"><input type="number" id="v_service" class="form-control" placeholder="Next Service ODO"></div>
+                    <div class="col-md-4">
+                        <button type="submit" class="btn btn-success btn-block">Save Vehicle</button>
+                        <span class="dev-hint" style="display:none; color:#888; font-size:12px; margin-top:5px;">[DB: tb_vehicle_registration | Code: core/api_router.py]</span>
+                    </div>
+                </div>
+            </form>
+            <div id="v-msg" style="margin-top:10px; font-weight:bold;"></div>
+        </div>
+
+        <div class="panel-body" style="margin-top: 20px;">
+            <table class="table table-bordered table-striped" id="vehicles-table">
+                <thead>
+                        <tr>
+                            <th>Vehicle Name</th>
+                            <th>Plate</th>
+                            <th>WOF Expiry</th>
+                            <th>REGO Expiry</th>
+                            <th>Next Service (km)</th>
+                            <th>RUC (km)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicles-body">
+                        <tr><td colspan="7">Loading vehicles...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+    </div>
+
+    <!-- Edit Vehicle Modal -->
+    <div class="modal fade" id="editVehicleModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Edit Vehicle</h4>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="edit-v-id">
+            <div class="form-group">
+                <label>Vehicle Name/Model</label>
+                <input type="text" id="edit-v-name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>License Plate</label>
+                <input type="text" id="edit-v-plate" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>WOF Expiry</label>
+                <input type="date" id="edit-v-wof" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>REGO Expiry</label>
+                <input type="date" id="edit-v-rego" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Next Service (km)</label>
+                <input type="number" id="edit-v-service" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>RUC (km)</label>
+                <input type="number" id="edit-v-ruc" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>Current ODO (km)</label>
+                <input type="number" id="edit-v-odo" class="form-control">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="saveVehicleEdit()">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchConfig();
+            fetchVehicles();
+        });
+
+        function fetchConfig() {
+            fetch('/api/config/dev_features')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "success") {
+                        if (data.auto_fill) {
+                            const btns = document.querySelectorAll('.auto-fill-btn');
+                            btns.forEach(b => b.style.display = 'inline-block');
+                        }
+                        if (data.dev_hints) {
+                            document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                        }
+                    }
+                });
+        }
+
+        function autoFillVehicle() {
+            const r = Math.floor(Math.random() * 900) + 100;
+            document.getElementById('v_name').value = 'Test Truck ' + r;
+            document.getElementById('v_plate').value = 'ABC' + r;
+            document.getElementById('v_wof').value = '2027-01-01';
+            document.getElementById('v_rego').value = '2027-06-01';
+            document.getElementById('v_service').value = '100000';
+        }
+
+        function fetchVehicles() {
+            fetch('/api/reminders/vehicles')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('vehicles-body');
+                    tbody.innerHTML = '';
+                    
+                    if(data.status === "success" && data.data.length > 0) {
+                        const today = new Date().toISOString().split('T')[0];
+                        const warn = new Date(Date.now() + 30*24*60*60*1000).toISOString().split('T')[0];
+
+                        data.data.forEach(v => {
+                            function dateBadge(dateStr) {
+                                if (!dateStr) return '<span class="text-muted">N/A</span>';
+                                if (dateStr < today) return `<span style="color:#fff;background:#d9534f;padding:2px 6px;border-radius:3px;font-weight:bold;">${dateStr} EXPIRED</span>`;
+                                if (dateStr <= warn) return `<span style="color:#fff;background:#f0ad4e;padding:2px 6px;border-radius:3px;font-weight:bold;">${dateStr} EXPIRING</span>`;
+                                return `<span style="color:#3d9970;">${dateStr}</span>`;
+                            }
+
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><b>${v.Vehicle || ''}</b></td>
+                                <td>${v.Plate || 'N/A'}</td>
+                                <td>${dateBadge(v.WOF)}</td>
+                                <td>${dateBadge(v.REGO)}</td>
+                                <td>${v.SERVICE ? v.SERVICE + ' km' : ''}</td>
+                                <td>${v.RUC ? v.RUC + ' km' : ''}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-sm" onclick='openVehicleEditModal(${JSON.stringify(v).replace(/'/g, "&apos;")})'> Edit</button>
+                                    <button class="btn btn-danger btn-sm" onclick="deleteVehicle(${v.id}, '${v.Vehicle}')"> Delete</button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7">No vehicles found.</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching vehicles:', error);
+                    document.getElementById('vehicles-body').innerHTML = '<tr><td colspan="7" style="color:red;">Error loading vehicles.</td></tr>';
+                });
+        }
+
+        function openVehicleEditModal(v) {
+            document.getElementById('edit-v-id').value = v.id;
+            document.getElementById('edit-v-name').value = v.Vehicle || '';
+            document.getElementById('edit-v-plate').value = v.Plate || '';
+            document.getElementById('edit-v-wof').value = v.WOF || '';
+            document.getElementById('edit-v-rego').value = v.REGO || '';
+            document.getElementById('edit-v-service').value = v.SERVICE || '';
+            document.getElementById('edit-v-ruc').value = v.RUC || '';
+            document.getElementById('edit-v-odo').value = v.Current_ODO || '';
+            $('#editVehicleModal').modal('show');
+        }
+
+        function saveVehicleEdit() {
+            const id = document.getElementById('edit-v-id').value;
+            const payload = {
+                vehicle: document.getElementById('edit-v-name').value,
+                plate: document.getElementById('edit-v-plate').value,
+                wof: document.getElementById('edit-v-wof').value || null,
+                rego: document.getElementById('edit-v-rego').value || null,
+                service: parseInt(document.getElementById('edit-v-service').value) || null,
+                ruc: parseInt(document.getElementById('edit-v-ruc').value) || null,
+                current_odo: parseInt(document.getElementById('edit-v-odo').value) || null
+            };
+
+            fetch(`/api/reminders/vehicles/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    alert('Vehicle updated successfully!');
+                    $('#editVehicleModal').modal('hide');
+                    fetchVehicles();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error updating vehicle');
+            });
+        }
+
+        function deleteVehicle(id, name) {
+            if(!confirm(`Are you sure you want to delete vehicle: ${name}?`)) return;
+            fetch(`/api/reminders/vehicles/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    alert('Vehicle deleted successfully!');
+                    fetchVehicles();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error deleting vehicle');
+            });
+        }
+
+        document.getElementById('vehicle-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                vehicle: document.getElementById('v_name').value,
+                plate: document.getElementById('v_plate').value,
+                wof: document.getElementById('v_wof').value,
+                rego: document.getElementById('v_rego').value,
+                service: parseInt(document.getElementById('v_service').value) || 0,
+                ruc: 0,
+                current_odo: 0
+            };
+
+            fetch('/api/reminders/vehicles', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('v-msg').style.color = 'green';
+                document.getElementById('v-msg').innerText = 'Vehicle added!';
+                setTimeout(() => {
+                    document.getElementById('v-msg').innerText = '';
+                    fetchVehicles(); // refresh list
+                }, 1500);
+            })
+            .catch(err => {
+                document.getElementById('v-msg').style.color = 'red';
+                document.getElementById('v-msg').innerText = 'Failed to add vehicle.';
+            });
+
+            // Check if dev features are enabled
+            fetch('/api/config/dev_features')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.dev_hints) {
+                        document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                    }
+                });
+        });
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Steelworks Manager - Admin Login</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <style>
+        body { padding-top: 50px; background-color: #f8f9fa; }
+        .login-container { max-width: 400px; margin: 0 auto; background: white; padding: 30px; border-radius: 5px; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="login-container">
+            <h3 class="text-center mb-4">Admin Login</h3>
+            <div id="error-msg" class="alert alert-danger" style="display:none;"></div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="login_id">Login ID</label>
+                    <input type="text" class="form-control" id="login_id" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="password" required>
+                        <span class="input-group-btn">
+                            <button class="btn btn-default" type="button" id="togglePassword">Show</button>
+                        </span>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary btn-block">Login</button>
+            </form>
+            <div class="mt-4">
+                <p class="text-muted text-center" style="font-size:0.9em; margin-bottom:5px;">[Quick Test Logins]</p>
+                <button class="btn btn-outline-secondary btn-sm btn-block" onclick="document.getElementById('login_id').value='Matt'; document.getElementById('password').value='12345678';">Login as GM (Matt)</button>
+                <button class="btn btn-outline-secondary btn-sm btn-block" onclick="document.getElementById('login_id').value='Aaron'; document.getElementById('password').value='12345678';">Login as PM (Aaron)</button>
+                <button class="btn btn-outline-secondary btn-sm btn-block" onclick="document.getElementById('login_id').value='Frank'; document.getElementById('password').value='12345678';">Login as QS (Frank)</button>
+                <button class="btn btn-outline-secondary btn-sm btn-block" onclick="document.getElementById('login_id').value='Rex'; document.getElementById('password').value='12345678';">Login as Workshop (Rex)</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auto-login check
+        window.onload = function() {
+            if (localStorage.getItem('admin_token') || localStorage.getItem('auth_token')) {
+                window.location.href = '/';
+            }
+        };
+
+        document.getElementById('togglePassword').addEventListener('click', function() {
+            const pwd = document.getElementById('password');
+            if (pwd.type === 'password') {
+                pwd.type = 'text';
+                this.innerText = 'Hide';
+            } else {
+                pwd.type = 'password';
+                this.innerText = 'Show';
+            }
+        });
+
+        document.getElementById('login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const login = document.getElementById('login_id').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ login, password })
+                });
+
+                const result = await response.json();
+                
+                if (response.ok && result.status === 'success') {
+                    // All users allowed to log in
+                    localStorage.setItem('auth_token', result.token);
+                    localStorage.setItem('right_level', result.right_level);
+                    window.location.href = '/';
+
+                } else if (response.ok && result.status === 'require_change') {
+                    localStorage.setItem('temp_token', result.temp_token);
+                    window.location.href = '/change_password.html';
+                } else {
+                    document.getElementById('error-msg').innerText = result.detail || result.message || "Login failed.";
+                    document.getElementById('error-msg').style.display = 'block';
+                }
+            } catch (err) {
+                document.getElementById('error-msg').innerText = "Network error. Please try again.";
+                document.getElementById('error-msg').style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

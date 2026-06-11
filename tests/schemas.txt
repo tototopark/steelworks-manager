@@ -1,0 +1,313 @@
+============================================================
+TABLE: tb_export_data
+============================================================
+`id` int(255) NOT NULL AUTO_INCREMENT,
+`table_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`export_date` date NOT NULL,
+`export_time` time NOT NULL,
+`export_by` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_jobs
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`date_creation` date NOT NULL,
+`job_number` int(255) NOT NULL,
+`quote_confirmed` tinyint(1) DEFAULT NULL,
+`company_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`site_address` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`superlot` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`lot_group` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`supervisor_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`builder_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`installer_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`date_last_update` date NOT NULL,
+`install_type` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`note_unfinished_work` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`note_other` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`WIP_Completed` tinyint(1) DEFAULT NULL,
+`WIP_Completed_Date` date DEFAULT NULL,
+`WIP_Issue_Date` date DEFAULT NULL,
+`WIP_Revision_Date` date DEFAULT NULL,
+`WIP_Revision` varchar(2) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`WIP_Revision_comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`PAINT_CSP_KEY` tinyint(1) DEFAULT NULL,
+`PAINT_CSP_DATE` date DEFAULT NULL,
+`PAINT_CSP_PO` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`PAINT_ASB_KEY` tinyint(1) DEFAULT NULL,
+`PAINT_ASB_DATE` date DEFAULT NULL,
+`PAINT_ASB_PO` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`PAINT_MET_KEY` tinyint(1) DEFAULT NULL,
+`PAINT_MET_DATE` date DEFAULT NULL,
+`PAINT_MET_PO` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`PAINT_OTHER_KEY` tinyint(1) DEFAULT NULL,
+`PAINT_OTHER_DATE` date DEFAULT NULL,
+`PAINT_OTHER_PO` varchar(6) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`PAINT_COMMENT` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`FASTENER_SUP` int(1) DEFAULT NULL,
+`FASTENER_PO` int(6) DEFAULT NULL,
+`FASTENER_EMPLOYEE` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`FASTENER_KEY` tinyint(1) DEFAULT NULL,
+`FASTENER_DATE` date DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_jobs_date_install
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`date_creation` date DEFAULT NULL,
+`job_number` int(11) NOT NULL,
+`lot` int(11) NOT NULL,
+`date_install` date DEFAULT NULL,
+`status_install` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_jobs_dates
+============================================================
+`id` int(255) NOT NULL AUTO_INCREMENT,
+`job_number` int(255) NOT NULL,
+`year` int(10) NOT NULL,
+`inq_consented_plans` date DEFAULT NULL,
+`rec_consented_plans` date DEFAULT NULL,
+`com_consented_plans` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_prenail_digital_files` date DEFAULT NULL,
+`rec_prenail_digital_files` date DEFAULT NULL,
+`com_prenail_digital_files` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_RFI` date DEFAULT NULL,
+`rec_RFI` date DEFAULT NULL,
+`com_RFI` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_coating_schedule` date DEFAULT NULL,
+`rec_coating_schedule` date DEFAULT NULL,
+`com_coating_schedule` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_approval_archi` date DEFAULT NULL,
+`rec_approval_archi` date DEFAULT NULL,
+`com_approval_archi` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_approval_engineers` date DEFAULT NULL,
+`rec_approval_engineers` date DEFAULT NULL,
+`com_approval_engineers` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_steel_purchase` date DEFAULT NULL,
+`rec_steel_purchase` date DEFAULT NULL,
+`com_steel_purchase` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_QA_doc` date DEFAULT NULL,
+`rec_QA_doc` date DEFAULT NULL,
+`com_QA_doc` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_SSSP` date DEFAULT NULL,
+`rec_SSSP` date DEFAULT NULL,
+`com_SSSP` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inq_invoice` date DEFAULT NULL,
+`rec_invoice` date DEFAULT NULL,
+`com_invoice` varchar(25) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_jobs_details
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`date_creation` date NOT NULL,
+`job_number` int(11) NOT NULL,
+`page` int(11) NOT NULL,
+`lot` int(11) NOT NULL,
+`member` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`GalvAndPaint` int(1) DEFAULT NULL,
+`quoted_det_hours` decimal(5,2) DEFAULT NULL,
+`quoted_fab_hours` decimal(5,2) DEFAULT NULL,
+`quoted_install_hours` decimal(5,2) DEFAULT NULL,
+`quoted_truck_hours` decimal(5,2) DEFAULT NULL,
+`design` int(1) DEFAULT NULL,
+`design_date_update` date DEFAULT NULL,
+`approved` int(1) DEFAULT NULL,
+`approved_date` date DEFAULT NULL,
+`made` tinyint(1) DEFAULT NULL,
+`made_date_update` date DEFAULT NULL,
+`made_by` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`loaded` tinyint(1) DEFAULT NULL,
+`load_date_update` date DEFAULT NULL,
+`on_site` tinyint(1) DEFAULT NULL,
+`on_site_date_update` date DEFAULT NULL,
+`temp_fix` tinyint(1) DEFAULT NULL,
+`temp_fix_date_update` date DEFAULT NULL,
+`chemset` tinyint(1) DEFAULT NULL,
+`chemset_date_update` date DEFAULT NULL,
+`tightened` tinyint(1) DEFAULT NULL,
+`tightened_date_update` date DEFAULT NULL,
+`finish` tinyint(1) DEFAULT NULL,
+`finish_date_update` date DEFAULT NULL,
+`finish_by` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_keys_remote_devices
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`name_device` varchar(255) NOT NULL,
+`email` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`private_key` varchar(255) NOT NULL,
+`ip` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`attempt_connection` int(1) DEFAULT NULL,
+`admin_validation` int(1) NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_leaves
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`employee_id` int(11) NOT NULL,
+`comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`date_start` date NOT NULL,
+`date_stop` date NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_login
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`login` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`password` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`firstname` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`surname` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`avatar` varchar(255) NOT NULL,
+`bay` int(11) DEFAULT NULL,
+`date_creation` date NOT NULL,
+`role` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`right_level` int(1) NOT NULL,
+`shop_label` varchar(1) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`admin_validation` int(1) NOT NULL,
+`site_safe_passport` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`site_safe_category` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`site_safe_exp_date` date DEFAULT NULL,
+`first_aid` int(1) DEFAULT NULL,
+`ip_1` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`ip_2` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`ip_3` varchar(15) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_photos
+============================================================
+`id` int(255) NOT NULL AUTO_INCREMENT,
+`job_number` varchar(4) NOT NULL,
+`year_creation` varchar(4) NOT NULL,
+`photo_name` varchar(50) NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_production_plan
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`employee_id` int(11) NOT NULL,
+`priority` int(11) NOT NULL,
+`job_number` int(11) NOT NULL,
+`date_creation` date NOT NULL,
+`lot` int(11) NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_public_holidays
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`name` text NOT NULL,
+`date_start` date NOT NULL,
+`date_stop` date NOT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_punchsheet
+============================================================
+`id` int(255) NOT NULL AUTO_INCREMENT,
+`year` year(4) NOT NULL,
+`month` varchar(3) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`day` int(11) DEFAULT NULL,
+`week` int(11) NOT NULL,
+`employee_id` int(11) NOT NULL,
+`job_detail_id` varchar(255) DEFAULT NULL,
+`startstop` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`start_time` time DEFAULT NULL,
+`start_time_AMPM` varchar(2) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`stop_time` time DEFAULT NULL,
+`stop_time_AMPM` varchar(2) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_reminder_other
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`comment` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`expiry_date` date DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_reminder_vehicle
+============================================================
+`Id` int(100) NOT NULL AUTO_INCREMENT,
+`Vehicle` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`Plate` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`WOF` date DEFAULT NULL,
+`REGO` date DEFAULT NULL,
+`SERVICE` int(8) DEFAULT NULL,
+`RUC` int(8) DEFAULT NULL,
+`Current_ODO` int(8) DEFAULT NULL,
+`VeederEroad` int(8) DEFAULT NULL,
+PRIMARY KEY (`Id`)
+
+============================================================
+TABLE: tb_tasks
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`site` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`task` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`employee_group` int(1) DEFAULT NULL,
+`employee` int(5) DEFAULT NULL,
+`published` int(1) DEFAULT NULL,
+`expiry_date` date DEFAULT NULL,
+`finished` int(1) DEFAULT NULL,
+`finished_by` varchar(100) DEFAULT NULL,
+`finished_date` date DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_tasks_employees_affectation
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`employee_1` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_2` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_3` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_4` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_5` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_6` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_7` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_8` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_9` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`employee_10` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_week_notes
+============================================================
+`id` int(10) NOT NULL AUTO_INCREMENT,
+`date` date NOT NULL,
+`note` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`note2` text DEFAULT NULL,
+PRIMARY KEY (`id`)
+
+============================================================
+TABLE: tb_wip
+============================================================
+`id` int(11) NOT NULL AUTO_INCREMENT,
+`tb_jobs_id` int(11) NOT NULL,
+`wps` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL,
+`in_house_inspector` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`in_house_exam_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`in_house_report_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`third_party_inspector` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`third_party_exam_type` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`third_party_report_number` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+`inspection_date` date DEFAULT NULL,
+`inspection_pass_fail` tinyint(1) NOT NULL,
+`wip_version` int(3) DEFAULT NULL,
+`wip_version_date` date DEFAULT NULL,
+`comment` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+PRIMARY KEY (`id`)
+

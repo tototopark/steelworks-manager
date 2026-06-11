@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Jobs</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #0080FF; color: white; padding: 10px; text-align: center; }
+        td { padding: 10px; text-align: center; border: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        .action-btn { padding: 5px 10px; margin: 2px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <div class="row" style="margin-bottom: 15px;">
+            <div class="col-md-8">
+                <h2>Active Jobs</h2>
+            </div>
+            <div class="col-md-4 text-right">
+                <a href="/new_job.html" class="btn btn-success" style="margin-top:20px;">+ Create New Job</a>
+            </div>
+        </div>
+
+        <table border="1" id="jobs-table">
+            <thead>
+                <tr>
+                    <th onclick="sortTable('jobs-table', 0)" style="cursor:pointer;">Job # ↕</th>
+                    <th onclick="sortTable('jobs-table', 1)" style="cursor:pointer;">Company ↕</th>
+                    <th onclick="sortTable('jobs-table', 2)" style="cursor:pointer;">Site Address ↕</th>
+                    <th onclick="sortTable('jobs-table', 3)" style="cursor:pointer;">Date Creation ↕</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="jobs-body">
+                <tr><td colspan="5">Loading jobs...</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Edit Job Modal -->
+    <div class="modal fade" id="editJobModal" tabindex="-1" role="dialog">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h4 class="modal-title">Edit Job</h4>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="edit-job-number">
+            <div class="form-group">
+                <label>Company Name</label>
+                <input type="text" id="edit-job-company" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Site Address</label>
+                <input type="text" id="edit-job-site" class="form-control">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            <button type="button" class="btn btn-primary" onclick="saveJobEdit()">Save changes</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        function sortTable(tableId, n) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById(tableId);
+            switching = true;
+            dir = "asc"; 
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+                    var cmpX = x.innerText.toLowerCase();
+                    var cmpY = y.innerText.toLowerCase();
+                    if (!isNaN(cmpX) && !isNaN(cmpY)) {
+                        cmpX = parseFloat(cmpX);
+                        cmpY = parseFloat(cmpY);
+                    }
+                    if (dir == "asc") {
+                        if (cmpX > cmpY) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (cmpX < cmpY) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount ++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchJobs();
+        });
+
+        function fetchJobs() {
+            const isAdmin = localStorage.getItem('right_level') == '10';
+            fetch('/api/jobs')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('jobs-body');
+                    tbody.innerHTML = '';
+                    
+                    if(data.status === "success" && data.data.length > 0) {
+                        data.data.forEach(job => {
+                            let deleteBtnHtml = isAdmin ? `<button class="btn btn-danger btn-sm" onclick="deleteJob(${job.job_number}, '${job.company_name}')">🗑️ Delete</button>` : '';
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><b>${job.job_number}</b></td>
+                                <td>${job.company_name}</td>
+                                <td>${job.site_address || ''}</td>
+                                <td>${job.date_creation || ''}</td>
+                                <td>
+                                    <a href="/jobsheet.html?job_number=${job.job_number}" class="btn btn-primary btn-sm action-btn">View</a>
+                                    <button class="btn btn-warning btn-sm action-btn" onclick='openJobEditModal(${JSON.stringify(job).replace(/'/g, "&apos;")})'>✏️ Edit</button>
+                                    ${deleteBtnHtml}
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="5">No active jobs found.</td></tr>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching jobs:', error);
+                    document.getElementById('jobs-body').innerHTML = '<tr><td colspan="5" style="color:red;">Error loading jobs.</td></tr>';
+                });
+        }
+
+        function openJobEditModal(job) {
+            document.getElementById('edit-job-number').value = job.job_number;
+            document.getElementById('edit-job-company').value = job.company_name || '';
+            document.getElementById('edit-job-site').value = job.site_address || '';
+            $('#editJobModal').modal('show');
+        }
+
+        function saveJobEdit() {
+            const jobNumber = document.getElementById('edit-job-number').value;
+            const payload = {
+                company_name: document.getElementById('edit-job-company').value,
+                site_address: document.getElementById('edit-job-site').value || null
+            };
+
+            fetch(`/api/jobs/${jobNumber}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    alert('Job updated successfully!');
+                    $('#editJobModal').modal('hide');
+                    fetchJobs();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error updating job');
+            });
+        }
+
+        function deleteJob(jobNumber, companyName) {
+            if(!confirm(`WARNING! Deleting Job #${jobNumber} (${companyName}) will cascade delete all related tasks, WIP, punchsheets, and dates! Are you sure?`)) return;
+            fetch(`/api/jobs/${jobNumber}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "success") {
+                    alert('Job and related data deleted successfully!');
+                    fetchJobs();
+                } else {
+                    alert('Error: ' + data.detail);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Error deleting job');
+            });
+        }
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

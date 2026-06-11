@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - Public Holidays</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        .admin-section {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background: white; }
+        th { background-color: #6c757d; color: white; padding: 10px; text-align: left; }
+        td { padding: 10px; border: 1px solid #ddd; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <h2>Public Holidays Management</h2>
+        <p>Manage public holidays and company shutdown dates. These dates are excluded from working hour calculations. <span class="dev-hint" style="display:none; color:#888; font-size:12px;">[DB: tb_public_holidays]</span></p>
+
+        <div class="row">
+            <!-- Add Holiday Form -->
+            <div class="col-md-4">
+                <div class="admin-section">
+                    <h4>Add New Holiday</h4>
+                    <form id="holiday-form">
+                        <div class="form-group">
+                            <label>Holiday Name</label>
+                            <input type="text" id="h_name" class="form-control" required placeholder="e.g. Christmas Day">
+                        </div>
+                        <div class="form-group">
+                            <label>Start Date</label>
+                            <input type="date" id="h_start" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Date</label>
+                            <input type="date" id="h_stop" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Save Holiday</button>
+                    </form>
+                    <div id="msg" style="margin-top:10px; font-weight:bold;"></div>
+                </div>
+            </div>
+
+            <!-- Holidays List -->
+            <div class="col-md-8">
+                <div class="admin-section">
+                    <h4 style="display:inline-block;">Registered Holidays</h4>
+                    <button class="btn btn-xs btn-default pull-right" onclick="fetchHolidays()">🔄 Refresh</button>
+                    <table border="1">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Start Date</th>
+                                <th>End Date</th>
+                                <th style="width:80px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="holidays-body">
+                            <tr><td colspan="4">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const rightLevel = localStorage.getItem('right_level');
+            if (rightLevel === null || parseInt(rightLevel) < 10) {
+                alert("Only Admins (Level 10+) can access the Holidays page.");
+                window.location.href = "/";
+                return;
+            }
+            
+            fetchConfig();
+            fetchHolidays();
+        });
+
+        function fetchConfig() {
+            fetch('/api/config/dev_features')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.dev_hints) {
+                        document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                    }
+                });
+        }
+
+        function fetchHolidays() {
+            fetch('/api/holidays')
+                .then(res => res.json())
+                .then(data => {
+                    const tbody = document.getElementById('holidays-body');
+                    tbody.innerHTML = '';
+                    if (data.status === 'success' && data.data.length > 0) {
+                        data.data.forEach(h => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td><b>${h.name}</b></td>
+                                <td>${h.date_start}</td>
+                                <td>${h.date_stop}</td>
+                                <td><button class="btn btn-danger btn-xs" onclick="deleteHoliday(${h.id})">Delete</button></td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4">No holidays registered.</td></tr>';
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('holidays-body').innerHTML = '<tr><td colspan="4" style="color:red;">Failed to load.</td></tr>';
+                });
+        }
+
+        document.getElementById('holiday-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                name: document.getElementById('h_name').value,
+                date_start: document.getElementById('h_start').value,
+                date_stop: document.getElementById('h_stop').value
+            };
+
+            fetch('/api/holidays', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                const msg = document.getElementById('msg');
+                if (data.status === 'success') {
+                    msg.style.color = 'green';
+                    msg.innerText = data.message;
+                    document.getElementById('holiday-form').reset();
+                    fetchHolidays();
+                    setTimeout(() => msg.innerText = '', 2000);
+                } else {
+                    msg.style.color = 'red';
+                    msg.innerText = data.message;
+                }
+            });
+        });
+
+        function deleteHoliday(id) {
+            if(!confirm("Are you sure you want to delete this holiday?")) return;
+            
+            fetch(`/api/holidays/${id}`, { method: 'DELETE' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') fetchHolidays();
+                else alert(data.message);
+            });
+        }
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

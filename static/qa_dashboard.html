@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - QA Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        .qa-container {
+            display: flex;
+            gap: 20px;
+        }
+        .job-list {
+            flex: 1;
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 15px;
+            height: 600px;
+            overflow-y: auto;
+        }
+        .wip-list {
+            flex: 3;
+            background: #fff;
+            border: 1px solid #0080FF;
+            border-radius: 5px;
+            padding: 15px;
+            height: 600px;
+            overflow-y: auto;
+        }
+        .job-item {
+            padding: 10px;
+            margin-bottom: 5px;
+            background: #fff;
+            border: 1px solid #ccc;
+            cursor: pointer;
+            border-radius: 3px;
+        }
+        .job-item:hover, .job-item.active {
+            background: #0080FF;
+            color: #fff;
+            border-color: #0056b3;
+        }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background-color: #343a40; color: white; padding: 10px; text-align: center; }
+        td { padding: 10px; text-align: center; border: 1px solid #ddd; vertical-align: middle; }
+        tr:nth-child(even) { background-color: #f2f2f2; }
+        
+        .btn-qa {
+            font-weight: bold;
+            padding: 5px 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h2>Quality Inspection (QA) Dashboard</h2>
+                <p>Review WIP items and mark them as Pass or Fail(NCR).</p>
+            </div>
+            <div>
+                <button class="btn btn-warning" onclick="generateQaData()">🎲 Load Random Test Data</button>
+            </div>
+        </div>
+
+        <div class="qa-container">
+            <!-- Left: Job List -->
+            <div class="job-list">
+                <h4>Pending Jobs</h4>
+                <div id="job-list-container">
+                    <p>Loading jobs...</p>
+                </div>
+            </div>
+
+            <!-- Right: WIP Items -->
+            <div class="wip-list">
+                <h4 id="wip-title">Select a job to view pending items</h4>
+                <div id="wip-container">
+                    <table border="1" id="wip-table" style="display:none;">
+                        <thead>
+                            <tr>
+                                <th>Lot</th>
+                                <th>Member</th>
+                                <th>WPS</th>
+                                <th>Inspector</th>
+                                <th>Ver</th>
+                                <th>Prev NCR Comment</th>
+                                <th>Action 
+                                    <span class="dev-hint" style="display:none; color:#bbb; font-size:10px;">[DB: tb_wip]</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody id="wip-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NCR Modal -->
+    <div id="ncrModal" class="modal fade" role="dialog">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header" style="background-color: #d9534f; color: white;">
+            <button type="button" class="close" data-dismiss="modal">&times;</button>
+            <h4 class="modal-title">Log NCR (Fail)</h4>
+          </div>
+          <div class="modal-body">
+            <p>Please enter the reason for non-conformance (NCR):</p>
+            <input type="hidden" id="ncr_wip_id">
+            <textarea id="ncr_comment" class="form-control" rows="4" placeholder="e.g. Weld defect on joint A, wrong material size..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-danger" onclick="submitFail()">Submit NCR</button>
+            <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+        let currentJobNumber = null;
+
+        document.addEventListener("DOMContentLoaded", function() {
+            // Check auth level for QA (e.g., level 5+)
+            const rightLevel = localStorage.getItem('right_level');
+            if (rightLevel !== null && parseInt(rightLevel) < 5) {
+                alert("You do not have sufficient privileges to perform QA checks. Read-only mode.");
+                // For a real app, you might disable buttons here
+            }
+
+            fetchJobs();
+            
+            // Check dev hints
+            fetch('/api/config/dev_features')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === 'success' && data.dev_hints) {
+                        document.querySelectorAll('.dev-hint').forEach(h => h.style.display = 'inline-block');
+                    }
+                });
+        });
+
+        function generateQaData() {
+            fetch('/api/dev/qa-test-data')
+                .then(res => res.json())
+                .then(data => {
+                    if(data.status === 'success') {
+                        fetchJobs();
+                    }
+                });
+        }
+
+        function fetchJobs() {
+            fetch('/api/qa/jobs')
+                .then(res => res.json())
+                .then(data => {
+                    const container = document.getElementById('job-list-container');
+                    container.innerHTML = '';
+                    if (data.status === 'success' && data.data.length > 0) {
+                        data.data.forEach(job => {
+                            const div = document.createElement('div');
+                            div.className = 'job-item';
+                            div.innerHTML = `<strong>#${job.job_number}</strong><br>${job.company_name}`;
+                            div.onclick = function() {
+                                document.querySelectorAll('.job-item').forEach(i => i.classList.remove('active'));
+                                div.classList.add('active');
+                                loadWipList(job.job_number);
+                            };
+                            container.appendChild(div);
+                        });
+                    } else {
+                        container.innerHTML = '<p>No pending QA jobs found.</p>';
+                        document.getElementById('wip-table').style.display = 'none';
+                        document.getElementById('wip-title').innerText = "All caught up!";
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('job-list-container').innerHTML = '<p style="color:red;">Error loading jobs.</p>';
+                });
+        }
+
+        function loadWipList(jobNumber) {
+            currentJobNumber = jobNumber;
+            document.getElementById('wip-title').innerText = `Pending QA for Job #${jobNumber}`;
+            const tbody = document.getElementById('wip-body');
+            tbody.innerHTML = '<tr><td colspan="7">Loading...</td></tr>';
+            document.getElementById('wip-table').style.display = 'table';
+
+            fetch(`/api/qa/wip/${jobNumber}`)
+                .then(res => res.json())
+                .then(data => {
+                    tbody.innerHTML = '';
+                    if (data.status === 'success' && data.data.length > 0) {
+                        data.data.forEach(item => {
+                            const tr = document.createElement('tr');
+                            tr.innerHTML = `
+                                <td>${item.lot}</td>
+                                <td><b>${item.member}</b></td>
+                                <td>${item.wps}</td>
+                                <td>${item.in_house_inspector || '-'}</td>
+                                <td><span class="label label-info">v${item.wip_version}</span></td>
+                                <td style="color:red; font-size:12px; max-width:200px; word-wrap:break-word;">
+                                    ${item.comment ? item.comment.replace(/\\n/g, '<br>') : ''}
+                                </td>
+                                <td>
+                                    <button class="btn btn-success btn-qa" onclick="submitPass(${item.wip_id})">PASS</button>
+                                    <button class="btn btn-danger btn-qa" style="margin-left:5px;" onclick="openNcrModal(${item.wip_id})">FAIL</button>
+                                </td>
+                            `;
+                            tbody.appendChild(tr);
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="7">No pending QA items.</td></tr>';
+                        // Refresh job list as this job is done
+                        setTimeout(fetchJobs, 1000);
+                    }
+                })
+                .catch(err => {
+                    tbody.innerHTML = '<tr><td colspan="7" style="color:red;">Error loading items.</td></tr>';
+                });
+        }
+
+        function submitPass(wipId) {
+            if(!confirm("Mark this item as PASSED?")) return;
+            
+            fetch('/api/qa/inspect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wip_id: wipId, is_pass: true, comment: "" })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    // Reload current WIP list
+                    loadWipList(currentJobNumber);
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(err => alert("Communication error"));
+        }
+
+        function openNcrModal(wipId) {
+            document.getElementById('ncr_wip_id').value = wipId;
+            document.getElementById('ncr_comment').value = '';
+            $('#ncrModal').modal('show');
+        }
+
+        function submitFail() {
+            const wipId = document.getElementById('ncr_wip_id').value;
+            const comment = document.getElementById('ncr_comment').value;
+            
+            if(!comment.trim()) {
+                alert("Please enter a reason for the NCR.");
+                return;
+            }
+
+            fetch('/api/qa/inspect', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ wip_id: parseInt(wipId), is_pass: false, comment: comment })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === 'success') {
+                    $('#ncrModal').modal('hide');
+                    loadWipList(currentJobNumber);
+                } else {
+                    alert("Error: " + data.message);
+                }
+            })
+            .catch(err => alert("Communication error"));
+        }
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

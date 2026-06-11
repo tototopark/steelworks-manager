@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Steelworks Manager - WIP Detail</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link href="/css/bootstrap.min.css" rel="stylesheet" type="text/css" />
+    <link href="/css/site.css" rel="stylesheet" type="text/css" />
+    <link href="/css/common.css" rel="stylesheet" type="text/css" />
+    <script src="/js/jquery-1.11.3.min.js"></script>
+    <script src="/js/bootstrap.min.js"></script>
+
+    <style>
+        body { padding-top: 20px; }
+        .wip-form { background: #fdfdfd; border: 1px solid #ddd; padding: 20px; border-radius: 5px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <!-- Navigation Menu -->
+        <div class="nav-menu" id="main-nav"></div>
+
+        <h2>Welding & Inspection (WIP) Detail</h2>
+        <p>Record WPS, Inspector details, and NDT results here.</p>
+
+        <div class="wip-form">
+            <form id="wip-form">
+                <div class="form-group">
+                    <label>Target Member (Job Number)</label>
+                    <input type="number" id="job_number" class="form-control" placeholder="e.g. 9991" required>
+                </div>
+                <div class="form-group">
+                    <label>WPS Used</label>
+                    <input type="text" id="wps" class="form-control" value="PE GMAW 02">
+                </div>
+                <div class="form-group">
+                    <label>Inspector Name</label>
+                    <input type="text" id="inspector" class="form-control" value="Matt Leitch" required>
+                </div>
+                <div class="form-group">
+                    <label>Inspector Type</label>
+                    <select id="inspector_type" class="form-control">
+                        <option value="in_house">In-House</option>
+                        <option value="third_party">Third Party</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Inspection Result</label>
+                    <select id="pass_fail" class="form-control">
+                        <option value="0">Pending</option>
+                        <option value="1">Pass</option>
+                        <option value="-1">Fail</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Comments</label>
+                    <input type="text" id="comment" class="form-control" placeholder="Optional comments...">
+                </div>
+                <button type="submit" class="btn btn-primary">Save WIP Record</button>
+            </form>
+            <div id="wip-msg" style="margin-top:15px; font-weight:bold;"></div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('wip-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const payload = {
+                job_number: parseInt(document.getElementById('job_number').value),
+                wps: document.getElementById('wps').value,
+                inspector: document.getElementById('inspector').value,
+                inspector_type: document.getElementById('inspector_type').value,
+                pass_fail: parseInt(document.getElementById('pass_fail').value),
+                comment: document.getElementById('comment').value
+            };
+
+            fetch('/api/wip', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                const msgBox = document.getElementById('wip-msg');
+                if(data.status === "success") {
+                    msgBox.style.color = 'green';
+                    msgBox.innerText = 'WIP record saved successfully!';
+                } else {
+                    msgBox.style.color = 'red';
+                    msgBox.innerText = 'Error: ' + data.detail;
+                }
+            })
+            .catch(err => {
+                document.getElementById('wip-msg').style.color = 'red';
+                document.getElementById('wip-msg').innerText = 'Failed to communicate with server.';
+            });
+        });
+    </script>
+<script src="/js/nav.js"></script>
+</body>
+</html>

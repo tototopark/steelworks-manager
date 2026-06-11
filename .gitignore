@@ -1,0 +1,52 @@
+# Git / Production Build Ignore List
+
+# Python virtual environment and runtimes
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Local Environment settings
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.staging
+
+# System / IDE / Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# SQLite Databases & Local Storage
+data/*.db
+data/steelworks.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Modification plans and checklists (수정 폴더 및 내부 세션 분석 이력 파일)
+수정/
+
+# Documentation folders
+docs/
+
+# Legacy copied assets to optimize build size (최근 복사한 대용량 아바타 이미지들)
+static/uploads/avatars/*
+# default.png는 예외로 업로드되게 하려면 아래 규칙 적용
+!static/uploads/avatars/default.png
